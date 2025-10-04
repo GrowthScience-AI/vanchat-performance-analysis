@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VanChat Performance Analysis</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: 'Crimson Text', serif;
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+    }
+    
+    .section {
+      min-height: 100vh;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      scroll-snap-align: start;
+    }
+    
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .title-section {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: white;
+    }
+    
+    .content-section {
+      background-color: #f8fafc;
+    }
+    
+    .title {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+    
+    .subtitle {
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: #e0f2fe;
+      margin-bottom: 2rem;
+    }
+    
+    .section-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1e3a8a;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+    
+    .accent-bar {
+      width: 80px;
+      height: 4px;
+      background-color: #4a90e2;
+      margin-bottom: 1rem;
+    }
+    
+    .chart-container {
+      height: 400px;
+      position: relative;
+      margin-bottom: 2rem;
+    }
+    
+    .insight-box {
+      background-color: #f8f9fa;
+      border-left: 4px solid #4a90e2;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .insight-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-bottom: 0.5rem;
+    }
+    
+    .insight-content {
+      color: #64748b;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    
+    .nav-dots {
+      position: fixed;
+      top: 50%;
+      right: 2rem;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      z-index: 100;
+    }
+    
+    .nav-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .nav-dot.active {
+      background-color: #4a90e2;
+      transform: scale(1.5);
+    }
+    
+    .metric-box {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 1.5rem;
+      backdrop-filter: blur(5px);
+      transition: all 0.3s ease;
+    }
+    
+    .metric-box:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+      font-size: 1rem;
+      color: #e0f2fe;
+    }
+    
+    .metric-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #60a5fa;
+    }
+    
+    .recommendation-box {
+      border-top: 4px solid #4a90e2;
+      background-color: #f8f9fa;
+      padding: 1rem;
+      height: 100%;
+      transition: all 0.3s ease;
+    }
+    
+    .recommendation-box:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .recommendation-number {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 0.5rem;
+    }
+    
+    .recommendation-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-bottom: 0.5rem;
+    }
+    
+    .recommendation-content {
+      color: #64748b;
+      font-size: 1rem;
+      line-height: 1.4;
+      margin-bottom: 1rem;
+    }
+    
+    .impact-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1e3a8a;
+    }
+    
+    .impact-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #4a90e2;
+    }
+    
+    .priority-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+    
+    .priority-high {
+      background-color: #e0f2fe;
+      color: #1e3a8a;
+    }
+    
+    .priority-medium {
+      background-color: #e0f2fe;
+      color: #4a90e2;
+    }
+    
+    .scroll-container {
+      scroll-snap-type: y mandatory;
+      overflow-y: scroll;
+      height: 100vh;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .title {
+        font-size: 2rem;
+      }
+      
+      .subtitle {
+        font-size: 1.25rem;
+      }
+      
+      .section-title {
+        font-size: 1.5rem;
+      }
+      
+      .chart-container {
+        height: 300px;
+      }
+      
+      .nav-dots {
+        right: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="scroll-container">
+    <!-- Navigation Dots -->
+    <div class="nav-dots">
+      <div class="nav-dot active" data-section="title"></div>
+      <div class="nav-dot" data-section="executive-summary"></div>
+      <div class="nav-dot" data-section="period-comparison"></div>
+      <div class="nav-dot" data-section="sales-performance"></div>
+      <div class="nav-dot" data-section="conversion-metrics"></div>
+      <div class="nav-dot" data-section="recommendations"></div>
+    </div>
+    
+    <!-- Title Section -->
+    <section id="title" class="section title-section">
+      <div class="container">
+        <div class="flex items-center mb-8">
+          <div class="w-20 h-1 bg-blue-300 mr-4"></div>
+          <div class="text-white text-2xl font-semibold">Growth Science</div>
+        </div>
+        
+        <h1 class="title mb-6">VanChat<br>Performance Analysis</h1>
+        <h2 class="subtitle mb-12">Comprehensive evaluation of chatbot metrics, industry benchmarks, and future projections</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div class="metric-box">
+            <div class="metric-icon">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="metric-value">+83%</div>
+            <div class="metric-label">Sales Growth</div>
+          </div>
+          
+          <div class="metric-box">
+            <div class="metric-icon">
+              <i class="fas fa-shopping-cart"></i>
+            </div>
+            <div class="metric-value">28.6%</div>
+            <div class="metric-label">Add-to-Cart Rate</div>
+          </div>
+          
+          <div class="metric-box">
+            <div class="metric-icon">
+              <i class="fas fa-comments"></i>
+            </div>
+            <div class="metric-value">21.1%</div>
+            <div class="metric-label">Chatbot Conversion</div>
+          </div>
+        </div>
+        
+        <p class="text-blue-100 text-xl">Performance Report • May-July 2025</p>
+        
+        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+          <a href="#executive-summary" class="text-white flex flex-col items-center animate-bounce">
+            <span class="mb-2">Scroll Down</span>
+            <i class="fas fa-chevron-down"></i>
+          </a>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Executive Summary Section -->
+    <section id="executive-summary" class="section content-section">
+      <div class="container">
+        <div class="accent-bar"></div>
+        <h2 class="section-title">Executive Summary & Methodology</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <div class="flex items-center mb-4">
+              <i class="fas fa-star text-blue-600 mr-3"></i>
+              <div class="text-xl font-semibold text-blue-900">Key Findings</div>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 mr-4">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-800">Sales Growth:</div>
+                  <div class="text-gray-600">83% increase from $9,885 to $18,084 between periods</div>
+                </div>
+              </div>
+              
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 mr-4">
+                  <i class="fas fa-users"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-800">Engagement:</div>
+                  <div class="text-gray-600">55.5% increase in chatbot interactions</div>
+                </div>
+              </div>
+              
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 mr-4">
+                  <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-800">Conversion:</div>
+                  <div class="text-gray-600">28.6% add-to-cart rate (4.3x industry average)</div>
+                </div>
+              </div>
+              
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 mr-4">
+                  <i class="fas fa-chart-pie"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-800">Projections:</div>
+                  <div class="text-gray-600">$26,284 and $34,484 for next two months</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="chart-container">
+              <canvas id="metricsChart"></canvas>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center mb-4">
+              <i class="fas fa-clipboard-list text-blue-600 mr-3"></i>
+              <div class="text-xl font-semibold text-blue-900">Analysis Methodology</div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6">
+              <div class="flex items-center">
+                <div class="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-white text-sm mr-3">1</div>
+                <div>
+                  <div class="font-semibold text-gray-800">Data Collection</div>
+                  <div class="text-gray-600 text-sm">from VanChat dashboard</div>
+                </div>
+              </div>
+              
+              <div class="flex items-center">
+                <div class="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-white text-sm mr-3">2</div>
+                <div>
+                  <div class="font-semibold text-gray-800">Period Comparison</div>
+                  <div class="text-gray-600 text-sm">between 30-day periods</div>
+                </div>
+              </div>
+              
+              <div class="flex items-center">
+                <div class="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-white text-sm mr-3">3</div>
+                <div>
+                  <div class="font-semibold text-gray-800">Benchmark Research</div>
+                  <div class="text-gray-600 text-sm">from industry sources</div>
+                </div>
+              </div>
+              
+              <div class="flex items-center">
+                <div class="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-white text-sm mr-3">4</div>
+                <div>
+                  <div class="font-semibold text-gray-800">Comparative Analysis</div>
+                  <div class="text-gray-600 text-sm">against standards</div>
+                </div>
+              </div>
+              
+              <div class="flex items-center">
+                <div class="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-white text-sm mr-3">5</div>
+                <div>
+                  <div class="font-semibold text-gray-800">Predictive Modeling</div>
+                  <div class="text-gray-600 text-sm">for future performance</div>
+                </div>
+              </div>
+              
+              <div class="flex items-center">
+                <div class="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center text-white text-sm mr-3">6</div>
+                <div>
+                  <div class="font-semibold text-gray-800">Strategic Assessment</div>
+                  <div class="text-gray-600 text-sm">and recommendations</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="chart-container">
+              <canvas id="radarChart"></canvas>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-right text-gray-400 text-sm">
+          Source: VanChat Dashboard Analytics, May-July 2025
+        </div>
+      </div>
+    </section>
+    
+    <!-- Period Comparison Section -->
+    <section id="period-comparison" class="section content-section">
+      <div class="container">
+        <div class="accent-bar"></div>
+        <h2 class="section-title">Key Metrics Comparison</h2>
+        <p class="text-gray-600 mb-8">Performance analysis between first and second 30-day periods</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <div class="chart-container">
+              <canvas id="comparisonChart"></canvas>
+            </div>
+            <div class="text-sm text-gray-400 mt-2">
+              Source: VanChat Dashboard Analytics, May-July 2025
+            </div>
+            
+            <div class="flex justify-between mt-6">
+              <div class="text-center">
+                <div class="text-2xl font-bold text-blue-600">+83.0%</div>
+                <div class="text-gray-600">Sales Growth</div>
+              </div>
+              
+              <div class="text-center">
+                <div class="text-2xl font-bold text-blue-600">+132.4%</div>
+                <div class="text-gray-600">Add-to-Cart</div>
+              </div>
+              
+              <div class="text-center">
+                <div class="text-2xl font-bold text-blue-600">+55.5%</div>
+                <div class="text-gray-600">Chatbot Interactions</div>
+              </div>
+              
+              <div class="text-center">
+                <div class="text-2xl font-bold text-blue-600">+25.2%</div>
+                <div class="text-gray-600">Conversion Rate</div>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <div class="insight-box">
+              <div class="insight-title">Sales Performance</div>
+              <div class="insight-content">
+                Total sales increased by 83% from $9,885 to $18,084, demonstrating strong revenue growth in the second period.
+              </div>
+            </div>
+            
+            <div class="insight-box">
+              <div class="insight-title">Engagement Metrics</div>
+              <div class="insight-content">
+                Customer interactions with VanChat grew by 55.5% (710 to 1,104), while total site visitors increased by 48.1% (14,125 to 20,916).
+              </div>
+            </div>
+            
+            <div class="insight-box">
+              <div class="insight-title">Conversion Improvements</div>
+              <div class="insight-content">
+                Add-to-cart conversion rate improved from 21.55% to 33.15%, while chatbot conversion rate increased from 18.17% to 22.74%.
+              </div>
+            </div>
+            
+            <div class="insight-box">
+              <div class="insight-title">Key Growth Areas</div>
+              <div class="insight-content">
+                The most significant improvement was in add-to-cart actions, which increased by 132.4% (481 to 1,118), indicating enhanced product discovery and purchase intent.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Sales Performance Section -->
+    <section id="sales-performance" class="section content-section">
+      <div class="container">
+        <div class="accent-bar"></div>
+        <h2 class="section-title">Sales Performance Analysis</h2>
+        <p class="text-gray-600 mb-8">VanChat sales growth comparison between 30-day periods</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <div class="chart-container">
+              <canvas id="salesChart"></canvas>
+            </div>
+            <div class="text-sm text-gray-400 mt-2">
+              Source: VanChat Dashboard Analytics, May-July 2025
+            </div>
+            
+            <div class="mt-6">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="p-2 text-blue-900">Metric</th>
+                    <th class="p-2 text-blue-900">Period 1</th>
+                    <th class="p-2 text-blue-900">Period 2</th>
+                    <th class="p-2 text-blue-900">Growth</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b">
+                    <td class="p-2">Total Sales</td>
+                    <td class="p-2">$9,885</td>
+                    <td class="p-2">$18,084</td>
+                    <td class="p-2 text-blue-800 font-semibold">+83.0%</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="p-2">Daily Average</td>
+                    <td class="p-2">$329</td>
+                    <td class="p-2">$603</td>
+                    <td class="p-2 text-blue-800 font-semibold">+83.0%</td>
+                  </tr>
+                  <tr>
+                    <td class="p-2">Customers</td>
+                    <td class="p-2">129</td>
+                    <td class="p-2">251</td>
+                    <td class="p-2 text-blue-800 font-semibold">+94.6%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div class="grid grid-rows-4 gap-4">
+            <div class="insight-box">
+              <div class="insight-title">Exceptional Growth</div>
+              <div class="insight-content">
+                Sales increased by <span class="font-bold text-blue-900">83%</span> from $9,885 to $18,084 between the first and second 30-day periods, significantly outpacing industry average growth rates.
+              </div>
+            </div>
+            
+            <div class="insight-box">
+              <div class="insight-title">Revenue Acceleration</div>
+              <div class="insight-content">
+                Daily average sales increased from <span class="font-bold text-blue-900">$329</span> to <span class="font-bold text-blue-900">$603</span>, demonstrating consistent momentum and improved conversion efficiency.
+              </div>
+            </div>
+            
+            <div class="insight-box">
+              <div class="insight-title">Chatbot Impact</div>
+              <div class="insight-content">
+                Enhanced VanChat performance drove <span class="font-bold text-blue-900">251 customers</span> to order in the second period, a <span class="font-bold text-blue-900">94.6%</span> increase from the first period's 129 customers.
+              </div>
+            </div>
+            
+            <div class="insight-box">
+              <div class="insight-title">Growth Trajectory</div>
+              <div class="insight-content">
+                The consistent upward trend suggests continued growth potential with proper scaling strategies, with projections indicating further acceleration.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Conversion Metrics Section -->
+    <section id="conversion-metrics" class="section content-section">
+      <div class="container">
+        <div class="accent-bar"></div>
+        <h2 class="section-title">Conversion Metrics Analysis</h2>
+        <p class="text-gray-600 mb-8">Comparison of key conversion metrics between periods and against industry benchmarks</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <div class="chart-container">
+              <canvas id="conversionChart"></canvas>
+            </div>
+            <div class="text-sm text-gray-400 mt-2">
+              Source: VanChat Dashboard Analytics, May-July 2025; Dynamic Yield E-commerce Benchmarks 2025
+            </div>
+          </div>
+          
+          <div>
+            <div class="grid grid-rows-3 gap-4">
+              <div class="insight-box">
+                <div class="insight-title">Add-to-Cart Improvement</div>
+                <div class="insight-content">
+                  Add-to-cart conversion rate increased from 21.55% to 33.15% between periods, representing a 53.8% improvement and exceeding industry average by 4.3x.
+                </div>
+              </div>
+              
+              <div class="insight-box">
+                <div class="insight-title">Chatbot Effectiveness</div>
+                <div class="insight-content">
+                  Chatbot conversion rate improved from 18.17% to 22.74%, showing a 25.2% increase and positioning VanChat in the top tier of industry performance.
+                </div>
+              </div>
+              
+              <div class="insight-box">
+                <div class="insight-title">Customer Acquisition</div>
+                <div class="insight-content">
+                  Number of customers acquired through chatbot nearly doubled from 129 to 251, demonstrating improved effectiveness in converting interactions to sales.
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="bg-gray-100">
+                    <th class="p-2 text-blue-900">Metric</th>
+                    <th class="p-2 text-blue-900">Period 1</th>
+                    <th class="p-2 text-blue-900">Period 2</th>
+                    <th class="p-2 text-blue-900">Industry Avg</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b">
+                    <td class="p-2">Add-to-Cart Rate</td>
+                    <td class="p-2">21.55%</td>
+                    <td class="p-2">33.15%</td>
+                    <td class="p-2">8.69%</td>
+                  </tr>
+                  <tr class="border-b">
+                    <td class="p-2">Chatbot Conversion</td>
+                    <td class="p-2">18.17%</td>
+                    <td class="p-2">22.74%</td>
+                    <td class="p-2">5.00%</td>
+                  </tr>
+                  <tr>
+                    <td class="p-2">Interaction Rate</td>
+                    <td class="p-2">5.03%</td>
+                    <td class="p-2">5.28%</td>
+                    <td class="p-2">3.20%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Recommendations Section -->
+    <section id="recommendations" class="section content-section">
+      <div class="container">
+        <div class="accent-bar"></div>
+        <h2 class="section-title">Strategic Recommendations</h2>
+        <p class="text-gray-600 mb-8">Actionable strategies to further enhance VanChat performance</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <div class="chart-container">
+              <canvas id="impactChart"></canvas>
+            </div>
+            <div class="text-sm text-gray-400 mt-2">
+              Source: VanChat Analytics and Industry Benchmarks, July 2025
+            </div>
+            
+            <div class="mt-6">
+              <div class="text-lg font-semibold text-blue-900 mb-2">Implementation Timeline</div>
+              <div class="relative h-12 bg-gray-100 rounded-lg overflow-hidden">
+                <div class="absolute top-0 left-0 h-full w-1/3 bg-blue-800 flex items-center justify-center text-white text-sm">
+                  Short-term<br>(1-2 months)
+                </div>
+                <div class="absolute top-0 left-1/3 h-full w-1/3 bg-blue-600 flex items-center justify-center text-white text-sm">
+                  Mid-term<br>(3-4 months)
+                </div>
+                <div class="absolute top-0 left-2/3 h-full w-1/3 bg-blue-400 flex items-center justify-center text-white text-sm">
+                  Long-term<br>(5-6 months)
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="grid grid-rows-3 gap-4">
+            <div class="recommendation-box">
+              <div class="flex items-center">
+                <div class="recommendation-number mr-2">01</div>
+                <div class="priority-badge priority-high">High Priority</div>
+              </div>
+              <div class="recommendation-title">Implement Personalized Product Recommendations</div>
+              <div class="recommendation-content">
+                Enhance VanChat with AI-driven personalized product recommendations based on browsing history and purchase patterns.
+              </div>
+              <div class="flex items-center">
+                <span class="impact-label mr-2">Expected Impact:</span>
+                <span class="impact-value">+15-20% Conversion</span>
+              </div>
+            </div>
+            
+            <div class="recommendation-box">
+              <div class="flex items-center">
+                <div class="recommendation-number mr-2">02</div>
+                <div class="priority-badge priority-medium">Medium Priority</div>
+              </div>
+              <div class="recommendation-title">Develop Guided Shopping Experiences</div>
+              <div class="recommendation-content">
+                Create interactive product discovery flows that help customers find the right wellness products for their specific needs.
+              </div>
+              <div class="flex items-center">
+                <span class="impact-label mr-2">Expected Impact:</span>
+                <span class="impact-value">+25% Avg. Order Value</span>
+              </div>
+            </div>
+            
+            <div class="recommendation-box">
+              <div class="flex items-center">
+                <div class="recommendation-number mr-2">03</div>
+                <div class="priority-badge priority-medium">Medium Priority</div>
+              </div>
+              <div class="recommendation-title">Implement Post-Purchase Follow-ups</div>
+              <div class="recommendation-content">
+                Develop automated follow-up sequences to gather feedback, encourage reviews, and suggest complementary products.
+              </div>
+              <div class="flex items-center">
+                <span class="impact-label mr-2">Expected Impact:</span>
+                <span class="impact-value">+30% Repeat Purchase</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-right text-gray-500 text-sm mt-8">
+          VanChat Performance Analysis • July 2025
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <script>
+    // Bar chart for Key Metrics Growth
+    const metricsCtx = document.getElementById('metricsChart').getContext('2d');
+    const metricsChart = new Chart(metricsCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Sales ($K)', 'Add-to-Cart', 'Chatbot Interactions', 'Conversion (%)'],
+        datasets: [
+          {
+            label: 'First 30 Days',
+            data: [9.9, 481, 710, 18.17],
+            backgroundColor: '#60a5fa',
+            borderColor: '#60a5fa',
+            borderWidth: 1
+          },
+          {
+            label: 'Second 30 Days',
+            data: [18.1, 1118, 1104, 22.74],
+            backgroundColor: '#1e3a8a',
+            borderColor: '#1e3a8a',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                if (value >= 1000) {
+                  return value / 1000 + 'K';
+                }
+                return value;
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+          }
+        }
+      }
+    });
+    
+    // Radar chart for Analysis Process Flow
+    const radarCtx = document.getElementById('radarChart').getContext('2d');
+    const radarChart = new Chart(radarCtx, {
+      type: 'radar',
+      data: {
+        labels: [
+          'Data Collection',
+          'Period Comparison',
+          'Benchmark Research',
+          'Comparative Analysis',
+          'Predictive Modeling',
+          'Strategic Assessment'
+        ],
+        datasets: [{
+          label: 'Analysis Completeness',
+          data: [100, 100, 100, 100, 100, 100],
+          fill: true,
+          backgroundColor: 'rgba(74, 144, 226, 0.2)',
+          borderColor: '#4a90e2',
+          pointBackgroundColor: '#1e3a8a',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: '#1e3a8a'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        elements: {
+          line: {
+            borderWidth: 3
+          }
+        },
+        scales: {
+          r: {
+            angleLines: {
+              display: true,
+              color: 'rgba(0, 0, 0, 0.1)'
+            },
+            suggestedMin: 0,
+            suggestedMax: 100,
+            ticks: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+    
+    // Bar chart with growth percentages
+    const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
+    const comparisonChart = new Chart(comparisonCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Sales ($K)', 'Add-to-Cart', 'Chatbot Interactions', 'Total Visitors (K)', 'Conversion Rate (%)'],
+        datasets: [
+          {
+            label: 'First 30 Days',
+            data: [9.9, 481, 710, 14.1, 18.17],
+            backgroundColor: '#60a5fa',
+            borderColor: '#60a5fa',
+            borderWidth: 1,
+            order: 2
+          },
+          {
+            label: 'Second 30 Days',
+            data: [18.1, 1118, 1104, 20.9, 22.74],
+            backgroundColor: '#1e3a8a',
+            borderColor: '#1e3a8a',
+            borderWidth: 1,
+            order: 1
+          },
+          {
+            label: 'Growth Percentage',
+            data: [83.0, 132.4, 55.5, 48.1, 25.2],
+            type: 'line',
+            borderColor: '#4a90e2',
+            backgroundColor: 'rgba(74, 144, 226, 0.2)',
+            borderWidth: 2,
+            pointBackgroundColor: '#4a90e2',
+            pointBorderColor: '#fff',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            fill: false,
+            tension: 0.1,
+            yAxisID: 'percentage',
+            order: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            grid: {
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Value'
+            },
+            ticks: {
+              callback: function(value) {
+                if (value >= 1000) {
+                  return value / 1000 + 'K';
+                }
+                return value;
+              }
+            }
+          },
+          percentage: {
+            position: 'right',
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Growth %'
+            },
+            ticks: {
+              callback: function(value) {
+                return value + '%';
+              }
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                if (context.dataset.yAxisID === 'percentage') {
+                  label += context.parsed.y + '%';
+                } else {
+                  if (context.parsed.y !== null) {
+                    if (context.datasetIndex === 0 || context.datasetIndex === 1) {
+                      if (context.parsed.y >= 1000) {
+                        label += Math.round(context.parsed.y).toLocaleString();
+                      } else {
+                        label += context.parsed.y;
+                      }
+                    }
+                  }
+                }
+                return label;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Bar chart for sales performance
+    const salesCtx = document.getElementById('salesChart').getContext('2d');
+    const salesChart = new Chart(salesCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Total Sales', 'Daily Average', 'Chatbot-Driven Sales', 'Add-to-Cart Rate (%)'],
+        datasets: [
+          {
+            label: 'First 30 Days',
+            data: [9885, 329, 5000, 21.55],
+            backgroundColor: '#60a5fa',
+            borderColor: '#60a5fa',
+            borderWidth: 1
+          },
+          {
+            label: 'Second 30 Days',
+            data: [18084, 603, 9700, 33.15],
+            backgroundColor: '#1e3a8a',
+            borderColor: '#1e3a8a',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            grid: {
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                if (value >= 1000) {
+                  return '$' + value / 1000 + 'K';
+                } else if (value > 100) {
+                  return '$' + value;
+                } else {
+                  return value + '%';
+                }
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                if (context.parsed.y !== null) {
+                  if (context.dataIndex === 0 || context.dataIndex === 2) {
+                    label += '$' + context.parsed.y.toLocaleString();
+                  } else if (context.dataIndex === 1) {
+                    label += '$' + context.parsed.y;
+                  } else {
+                    label += context.parsed.y + '%';
+                  }
+                }
+                return label;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Horizontal bar chart for conversion metrics
+    const conversionCtx = document.getElementById('conversionChart').getContext('2d');
+    const conversionChart = new Chart(conversionCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Add-to-Cart Rate', 'Chatbot Conversion', 'Interaction Rate', 'Industry Add-to-Cart Avg', 'Industry Chatbot Avg'],
+        datasets: [
+          {
+            label: 'First 30 Days',
+            data: [21.55, 18.17, 5.03, 8.69, 5.00],
+            backgroundColor: '#60a5fa',
+            borderColor: '#60a5fa',
+            borderWidth: 1,
+            barPercentage: 0.7
+          },
+          {
+            label: 'Second 30 Days',
+            data: [33.15, 22.74, 5.28, 8.69, 5.00],
+            backgroundColor: '#1e3a8a',
+            borderColor: '#1e3a8a',
+            borderWidth: 1,
+            barPercentage: 0.7
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Conversion Rate (%)'
+            },
+            ticks: {
+              callback: function(value) {
+                return value + '%';
+              }
+            }
+          },
+          y: {
+            grid: {
+              display: false
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                if (context.parsed.x !== null) {
+                  label += context.parsed.x.toFixed(2) + '%';
+                }
+                return label;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Impact chart for recommendations
+    const impactCtx = document.getElementById('impactChart').getContext('2d');
+    const impactChart = new Chart(impactCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Current', 'With Personalized Recommendations', 'With Guided Shopping', 'With Post-Purchase Follow-ups'],
+        datasets: [
+          {
+            label: 'Conversion Rate (%)',
+            data: [22.74, 27.29, 22.74, 22.74],
+            backgroundColor: '#1e3a8a',
+            borderColor: '#1e3a8a',
+            borderWidth: 1,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Avg. Order Value ($)',
+            data: [73.49, 73.49, 91.86, 73.49],
+            backgroundColor: '#4a90e2',
+            borderColor: '#4a90e2',
+            borderWidth: 1,
+            yAxisID: 'y1'
+          },
+          {
+            label: 'Repeat Purchase Rate (%)',
+            data: [15, 15, 15, 19.5],
+            backgroundColor: '#60a5fa',
+            borderColor: '#60a5fa',
+            borderWidth: 1,
+            yAxisID: 'y'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            grid: {
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Rate (%)'
+            },
+            ticks: {
+              callback: function(value) {
+                return value + '%';
+              }
+            }
+          },
+          y1: {
+            beginAtZero: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Value ($)'
+            },
+            grid: {
+              drawOnChartArea: false
+            },
+            ticks: {
+              callback: function(value) {
+                return '$' + value;
+              }
+            }
+          }
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: 'Projected Impact of Recommendations',
+            color: '#1e3a8a',
+            font: {
+              size: 16,
+              weight: 'bold'
+            },
+            padding: {
+              bottom: 20
+            }
+          },
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                if (context.parsed.y !== null) {
+                  if (context.datasetIndex === 1) {
+                    label += '$' + context.parsed.y.toFixed(2);
+                  } else {
+                    label += context.parsed.y.toFixed(2) + '%';
+                  }
+                }
+                return label;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Navigation dots functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const sections = document.querySelectorAll('.section');
+      const navDots = document.querySelectorAll('.nav-dot');
+      
+      // Smooth scroll to section
+      navDots.forEach(dot => {
+        dot.addEventListener('click', function() {
+          const targetId = this.getAttribute('data-section');
+          document.getElementById(targetId).scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+      
+      // Update active dot on scroll
+      window.addEventListener('scroll', function() {
+        let current = '';
+        
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+          if (pageYOffset >= (sectionTop - sectionHeight / 3)) {
+            current = section.getAttribute('id');
+          }
+        });
+        
+        navDots.forEach(dot => {
+          dot.classList.remove('active');
+          if (dot.getAttribute('data-section') === current) {
+            dot.classList.add('active');
+          }
+        });
+      });
+      
+      // Add animation to charts on scroll
+      const animateOnScroll = function() {
+        const charts = document.querySelectorAll('.chart-container');
+        
+        charts.forEach(chart => {
+          const chartPosition = chart.getBoundingClientRect().top;
+          const screenPosition = window.innerHeight / 1.3;
+          
+          if (chartPosition < screenPosition) {
+            chart.classList.add('animate__animated', 'animate__fadeIn');
+          }
+        });
+      };
+      
+      window.addEventListener('scroll', animateOnScroll);
+    });
+  </script>
+</body>
+</html>
